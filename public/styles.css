@@ -81,3 +81,165 @@ body {
     50% { transform: scale(0.9); }
   }
   
+  #adminLoginButton {
+    margin-top: 20px;
+    width: 350px;  /* Increased width */
+    height: 50px;  /* Increased height */
+    font-size: 26px;  /* Increased font size */
+    border: none;
+    background-color: #4CAF50;  /* Same as keypad buttons */
+    color: white;
+    border-radius: 15px;  /* Slightly rounded corners */
+    cursor: pointer;
+    box-shadow: inset 0 2px 2px rgba(255, 255, 255, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s, transform 0.3s;
+    text-shadow: 0px 1px 1px #666;
+  }
+  
+  #adminLoginButton:hover {
+    background-color: #45a049;  /* Same as keypad buttons */
+  }
+  
+  #adminLoginButton:active {
+    animation: bounce 0.3s ease;
+  }
+  
+  #adminLoginButton:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(72, 180, 97, 0.5);
+  }
+  
+
+  /* Admin Container */
+#admin-container {
+  text-align: center;
+  width: 350px;
+  margin: auto;
+  background-color: #f2f2f2;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(to bottom, #f2f2f2, #e6e6e6);
+}
+
+/* Admin Title */
+#admin-title {
+  margin-bottom: 20px;
+  animation: appear 1s ease-out;
+}
+
+/* Input Group */
+.input-group {
+  margin-bottom: 20px;
+}
+
+/* Admin Login Form */
+#adminLoginForm label {
+  font-size: 18px;
+}
+
+#adminLoginForm input[type="text"],
+#adminLoginForm input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  box-sizing: border-box;
+}
+
+/* Login Button */
+#loginButton {
+  width: 100%;
+  height: 50px;
+  font-size: 18px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#loginButton:hover {
+  background-color: #45a049;
+}
+
+
+/* Dashboard Container */
+#dashboard-container {
+  text-align: center;
+  width: 350px;
+  margin: auto;
+  background-color: #f2f2f2;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(to bottom, #f2f2f2, #e6e6e6);
+}
+
+/* Dashboard Title */
+#dashboard-title {
+  margin-bottom: 20px;
+  animation: appear 1s ease-out;
+}
+
+/* Input Group for Dashboard */
+.input-group {
+  margin-bottom: 20px;
+}
+
+/* Add PIN Form */
+#addPinForm label {
+  font-size: 18px;
+}
+
+#addPinForm input[type="text"] {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  box-sizing: border-box;
+}
+
+/* General Button Styles */
+#addPinButton, #removePinButton, #addAdminButton {
+  width: 100%;
+  height: 50px;
+  font-size: 18px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#addPinButton:hover, #removePinButton:hover, #addAdminButton:hover {
+  background-color: #45a049;
+}
+
+/* Input Group */
+.input-group {
+  margin-bottom: 20px;
+}
+
+/* Labels */
+#addPinForm label, #removePinForm label, #addAdminForm label {
+  font-size: 18px;
+}
+
+/* Text Inputs */
+#addPinForm input[type="text"], 
+#removePinForm input[type="text"], 
+#addAdminForm input[type="text"], 
+#addAdminForm input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  box-sizing: border-box;
+}
+
+/* Divider */
+.divider {
+  height: 2px;
+  background-color: #ccc;
+  margin: 20px 0;
+}
