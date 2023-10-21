@@ -18,7 +18,7 @@ let db = new sqlite3.Database('./AccessControl.db', (err) => {
   if (err) {
     return console.error(err.message);
   }
-  console.log('Connected to the SQLite database.');
+  console.log('[INFO] Connected to the SQLite database.');
 });
 
 db.run('CREATE TABLE IF NOT EXISTS admin_users (username TEXT, password TEXT)', (err) => {
@@ -87,6 +87,6 @@ app.get('/admin_dashboard', (req, res) => {
 
 
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}/`);
-  console.log('You can add add a admin user using: npm start -- [Username] [Password]');
+  console.log(`[INFO] Server running at http://localhost:${port}/`);
+  console.log('[INFO] You can add add a admin user using: npm start -- [Username] [Password]');
 });
