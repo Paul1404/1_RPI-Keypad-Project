@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Keypad Simulator</title>
+  <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+  <div id="keypad-container">
+    <h1 id="keypad-title">Keypad Simulator</h1>
+    <div id="pinDisplay">
+      <!-- The PIN will be displayed here -->
+    </div>
+    <div id="keypad">
+      <button class="keypad-button" onclick="appendToPin(1)">1</button>
+      <button class="keypad-button" onclick="appendToPin(2)">2</button>
+      <button class="keypad-button" onclick="appendToPin(3)">3</button>
+      <button class="keypad-button" onclick="appendToPin(4)">4</button>
+      <button class="keypad-button" onclick="appendToPin(5)">5</button>
+      <button class="keypad-button" onclick="appendToPin(6)">6</button>
+      <button class="keypad-button" onclick="appendToPin(7)">7</button>
+      <button class="keypad-button" onclick="appendToPin(8)">8</button>
+      <button class="keypad-button" onclick="appendToPin(9)">9</button>
+      <button class="keypad-button" onclick="clearPin()">C</button>
+      <button class="keypad-button" onclick="appendToPin(0)">0</button>
+      <button class="keypad-button" onclick="submitPin()">OK</button>
+    </div>
+  </div>
+
+  <script>
+    let pin = "";
+    function appendToPin(number) {
+      pin += number;
+      document.getElementById("pinDisplay").textContent = pin;
+    }
+    function clearPin() {
+      pin = "";
+      document.getElementById("pinDisplay").textContent = pin;
+    }
+    async function submitPin() {
+      const response = await fetch('/keypad-input', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ pin: pin })
+      });
+      const data = await response.json();
+      alert(data.message);
+      clearPin();
+    }
+  </script>
+</body>
+</html>
