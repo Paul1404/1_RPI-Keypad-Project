@@ -2,6 +2,8 @@
 
 This is a simple Access Control System implemented in Node.js using Express, SQLite, and JSON Web Tokens (JWT). It allows authorized users to log in and access an admin dashboard.
 
+### ⚠️ This is still extremly work in progress with sessions not working correctly yet and the overall login not being secure!!!
+
 ## 🌟 Features
 
 - 💻 User authentication using a username and password.
