@@ -17,10 +17,28 @@ document.addEventListener("DOMContentLoaded", function() {
     .then(response => response.json())
     .then(data => {
       if (data.message === 'Login successful') {
-        // You can store the JWT token in localStorage or as a cookie for further use
+        console.log("Storing token:", data.token);
         localStorage.setItem('token', data.token);
-        // Redirect to admin dashboard
-        window.location.href = 'admin_dashboard.html';
+
+        // Fetch admin dashboard content upon successful login
+        fetch('/admin_dashboard', {
+          headers: {
+            'Authorization': data.token  // or 'Bearer ' + data.token if your backend expects "Bearer"
+          }
+        })
+        .then(response => {
+          if (response.status === 401) {
+            // Handle unauthorized access, possibly redirect to login page
+            window.location.href = "/admin_login.html";
+          } else {
+            // Redirect to admin dashboard
+            window.location.href = '/admin_dashboard';
+          }
+        })
+        .catch((error) => {
+          console.error('Fetch Error:', error);
+        });
+
       } else {
         alert('Invalid credentials');
       }

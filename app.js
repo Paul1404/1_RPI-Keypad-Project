@@ -27,6 +27,14 @@ db.run('CREATE TABLE IF NOT EXISTS admin_users (username TEXT, password TEXT)', 
   }
 });
 
+// Create a table for storing PIN codes
+db.run('CREATE TABLE IF NOT EXISTS valid_pins (pin TEXT)', (err) => {
+  if (err) {
+    return console.log(err.message);
+  }
+});
+
+
 // Add default admin if command line arguments are provided
 if (defaultAdminUsername && defaultAdminPassword) {
   bcrypt.hash(defaultAdminPassword, saltRounds, function(err, hash) {
@@ -73,6 +81,10 @@ app.post('/admin-login', loginLimiter, (req, res) => {
 });
 
 app.get('/admin_dashboard', (req, res) => {
+  console.log('Received Request:', req.method, req.url);
+  console.log('Received Authorization header:', req.headers['authorization']);
+  console.log('User-Agent:', req.headers['user-agent']);
+
   const token = req.headers['authorization'];
   if (!token) {
     return res.status(401).json({ message: 'Unauthorized: No token provided' });
@@ -85,6 +97,22 @@ app.get('/admin_dashboard', (req, res) => {
   });
 });
 
+// Endpoint for handling keypad input
+app.post('/keypad-input', (req, res) => {
+  const { pin } = req.body;
+
+  db.get('SELECT pin FROM valid_pins WHERE pin = ?', [pin], (err, row) => {
+    if (err) {
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+    
+    if (row) {
+      return res.json({ message: 'PIN accepted' });
+    } else {
+      return res.json({ message: 'Invalid PIN' });
+    }
+  });
+});
 
 app.listen(port, () => {
   console.log(`[INFO] Server running at http://localhost:${port}/`);
