@@ -17,9 +17,6 @@ document.addEventListener("DOMContentLoaded", function() {
     .then(response => response.json())
     .then(data => {
       if (data.message === 'Login successful') {
-        // No need to store token in localStorage
-        // Session ID will be sent automatically in cookies
-
         // Redirect to admin dashboard
         window.location.href = '/admin_dashboard';
       } else {
