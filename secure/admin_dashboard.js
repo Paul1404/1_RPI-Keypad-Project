@@ -1,19 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // Check for JWT token
-  const token = localStorage.getItem("token");
-  console.log("Retrieved token from storage:", token);
-  if (!token) {
-    // Redirect to login page if no token found
-    window.location.href = "/admin.html";
-    return;
-  }
-
   // Fetch admin dashboard content upon page load
-  fetch('/admin_dashboard', {
-    headers: {
-      'Authorization': token
-    }
-  })
+  fetch('/admin_dashboard')
   .then(response => {
     if (response.status === 401) {
       // Handle unauthorized access, possibly redirect to login page
@@ -25,7 +12,6 @@ document.addEventListener("DOMContentLoaded", function () {
   .then(data => {
     if (data) {
       // Populate the admin dashboard using the received data
-      // This part depends on how you'd like to display the data
     }
   })
   .catch((error) => {
@@ -43,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": token // Add token to request header
+        // No need to add token to request header
       },
       body: JSON.stringify({ pin: newPin }),
     })
