@@ -17,6 +17,26 @@
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
+
+        /* New styles for the home button */
+        .home-button {
+        display: inline-block;
+        width: 200px;
+        height: 50px;
+        line-height: 50px;
+        text-align: center;
+        background-color: #007BFF;
+        color: white;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 18px;
+        transition: background-color 0.3s;
+        }
+
+        .home-button:hover {
+        background-color: #0056b3;
+        }
+
     </style>
 </head>
 <body>
@@ -24,7 +44,7 @@
     <div class="container">
         <h1>Unauthorized Access</h1>
         <p>You do not have permission to access this page.</p>
-        <a href="/">Go back to home</a>
+        <a href="/" class="home-button">Go back to home</a> <!-- Added class -->
     </div>
 
 </body>

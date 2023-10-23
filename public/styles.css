@@ -285,3 +285,16 @@ body {
   color: white;  /* Make text white */
 }
 
+
+/* New Go Back Container */
+#goBackContainer {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+
+#goBackButton {
+  width: 200px;  /* Set a specific width */
+  /* other styles */
+}
+
