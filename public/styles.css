@@ -188,6 +188,7 @@ body {
 /* Dashboard Container */
 #dashboard-container {
   text-align: center;
+  position: relative;
   width: 350px;
   margin: auto;
   background-color: #f2f2f2;
@@ -222,8 +223,14 @@ body {
   box-sizing: border-box;
 }
 
+#goBackButton {
+  position: absolute;  /* Absolute positioning */
+  top: 10px;  /* 10 pixels from the top */
+  left: 10px;  /* 10 pixels from the left */
+}
+
 /* General Button Styles */
-#addPinButton, #removePinButton, #addAdminButton {
+#addPinButton, #removePinButton, #addAdminButton, #removeAdminButton, #goBackButton {
   width: 100%;
   height: 50px;
   font-size: 18px;
@@ -235,17 +242,16 @@ body {
   transition: background-color 0.3s;
 }
 
-#addPinButton:hover, #removePinButton:hover, #addAdminButton:hover {
+#addPinButton:hover, #removePinButton:hover, #addAdminButton:hover, #removeAdminButton:hover, #goBackButton:hover {
   background-color: #0056b3;
 }
-
 /* Input Group */
 .input-group {
   margin-bottom: 20px;
 }
 
 /* Labels */
-#addPinForm label, #removePinForm label, #addAdminForm label {
+#addPinForm label, #removePinForm label, #addAdminForm label, #removeAdminForm label {
   font-size: 18px;
 }
 
@@ -253,12 +259,14 @@ body {
 #addPinForm input[type="text"], 
 #removePinForm input[type="text"], 
 #addAdminForm input[type="text"], 
-#addAdminForm input[type="password"] {
+#addAdminForm input[type="password"],
+#removeAdminForm input[type="text"] {
   width: 100%;
   padding: 12px;
   margin: 8px 0;
   box-sizing: border-box;
 }
+
 
 /* Divider */
 .divider {
@@ -273,6 +281,7 @@ body {
 }
 
 /* Dashboard Form Inputs and Buttons */
-#addPinButton, #removePinButton, #addAdminButton {
+#addPinButton, #removePinButton, #addAdminButton, #removeAdminButton {
   color: white;  /* Make text white */
 }
+

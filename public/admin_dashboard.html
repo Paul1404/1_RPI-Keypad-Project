@@ -8,6 +8,9 @@
 </head>
 <body>
   <div id="dashboard-container">
+    <!-- Go Back Button -->
+    <!-- <input type="button" id="goBackButton" value="Go Back">-->
+    
     <h1 id="dashboard-title">System Dashboard</h1>
 
     <!-- Form to Add PIN -->
@@ -46,7 +49,21 @@
       </div>
       <input type="submit" id="addAdminButton" value="Add Admin">
     </form>
+
+    <!-- Divider -->
+    <div class="divider"></div>
+
+    <!-- Form to Remove Admin User -->
+    <form id="removeAdminForm">
+      <div class="input-group">
+        <label for="removeAdmin">Remove Admin Username:</label>
+        <input type="text" id="removeAdmin" name="removeAdmin" required>
+      </div>
+      <input type="submit" id="removeAdminButton" value="Remove Admin">
+    </form>
+
   </div>
+
   <script src="admin_dashboard.js"></script>
 </body>
 </html>

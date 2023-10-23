@@ -12,7 +12,7 @@ const fs = require('fs');
 
 const port = process.env.PORT || 3000;
 const secretKey = process.env.SECRET_KEY;
-const saltRounds = process.env.SALT_ROUNDS;
+const saltRounds = parseInt(process.env.SALT_ROUNDS, 10);
 const logDir = 'logs';
 
 const humanReadableFormat = winston.format.printf(({ level, message, label, timestamp, ...metadata }) => {
@@ -154,7 +154,7 @@ app.post('/admin-login', loginLimiter, (req, res) => {
 
 app.get('/admin_dashboard', (req, res) => {
   if (req.session.username) {
-    res.sendFile(path.join(__dirname, 'secure/admin_dashboard.html'));
+    res.sendFile(path.join(__dirname, 'public/admin_dashboard.html'));
   } else {
     res.status(401).sendFile(path.join(__dirname, 'public/unauthorized.html'));
   }
@@ -230,6 +230,27 @@ app.post('/add-admin', (req, res) => {
       });
       res.json({ message: 'Admin added successfully' });
     });
+  });
+});
+
+app.post('/remove-admin', (req, res) => {
+  const { username } = req.body;
+  const query = 'DELETE FROM admin_users WHERE username = ?';
+  db.run(query, [username], (err) => {
+    if (err) {
+      logger.error(`Failed to remove admin`, {
+        error_message: err.message,
+        action: 'remove_admin',
+        status: 'failure'
+      });
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+    logger.info(`Successfully removed admin`, {
+      username,
+      action: 'remove_admin',
+      status: 'success'
+    });
+    res.json({ message: 'Admin removed successfully' });
   });
 });
 

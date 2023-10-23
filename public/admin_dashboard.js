@@ -71,12 +71,18 @@ removePinForm.addEventListener("submit", function (event) {
   });
 });
 
+const goBackButton = document.getElementById("goBackButton");
+goBackButton.addEventListener("click", function () {
+  window.location.href = "/";
+});
+
+
 const addAdminForm = document.getElementById("addAdminForm");
 addAdminForm.addEventListener("submit", function (event) {
   event.preventDefault();
 
-  const adminUsername = document.getElementById("adminUsername").value;
-  const adminPassword = document.getElementById("adminPassword").value;
+  const adminUsername = document.getElementById("newAdmin").value;
+  const adminPassword = document.getElementById("newAdminPassword").value;  
 
   fetch("/add-admin", {
     method: "POST",
@@ -91,6 +97,32 @@ addAdminForm.addEventListener("submit", function (event) {
       alert("Admin added successfully");
     } else {
       alert("Failed to add admin");
+    }
+  })
+  .catch((error) => {
+    console.error("Error:", error);
+  });
+});
+
+const removeAdminForm = document.getElementById("removeAdminForm");
+removeAdminForm.addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const adminUsername = document.getElementById("removeAdmin").value;
+
+  fetch("/remove-admin", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username: adminUsername }),
+  })
+  .then((response) => response.json())
+  .then((data) => {
+    if (data.message === "Admin removed successfully") {
+      alert("Admin removed successfully");
+    } else {
+      alert("Failed to remove admin");
     }
   })
   .catch((error) => {
