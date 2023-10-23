@@ -4,64 +4,124 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const rateLimit = require("express-rate-limit");
 const path = require('path');
+const util = require('util');
 const app = express();
-const port = 3000;
-const saltRounds = 10;
+require('dotenv').config();
+const winston = require('winston');
+const fs = require('fs');
 
+const port = process.env.PORT || 3000;
+const secretKey = process.env.SECRET_KEY;
+const saltRounds = process.env.SALT_ROUNDS;
+const logDir = 'logs';
+
+const humanReadableFormat = winston.format.printf(({ level, message, label, timestamp, ...metadata }) => {
+  let msg = `${timestamp} [${level}] : ${message} `
+  if(metadata) {
+    msg += JSON.stringify(metadata)
+  }
+  return msg
+});
+
+// Create the logs directory if it does not exist
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir);
+}
+
+// Configure Winston
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' }),
+  ],
+});
+
+
+// If we're not in production then also log to the console
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.timestamp(),
+      humanReadableFormat
+    )
+  }));
+}
 // Initialize session middleware
 app.use(session({
-  secret: 'your_secret_key_here',
+  secret: secretKey,
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false } // Use secure: true in production
+  cookie: { secure: false } // Use secure: true in production!!!
 }));
 
-let db = new sqlite3.Database('./AccessControl.db', (err) => {
-  if (err) {
-    console.error(`[ERROR] ${err.message}`);
-    return;
-  }
-  console.log('[INFO] Connected to the SQLite database.');
-});
-
-// Initialize tables
-const tableInitQueries = [
-  'CREATE TABLE IF NOT EXISTS admin_users (username TEXT, password TEXT)',
-  'CREATE TABLE IF NOT EXISTS valid_pins (pin TEXT)'
-];
-
-tableInitQueries.forEach(query => {
-  db.run(query, (err) => {
-    if (err) console.error(`[ERROR] ${err.message}`);
-  });
-});
-
-// Create a default admin if command line arguments are provided
-const [defaultAdminUsername, defaultAdminPassword] = process.argv.slice(2);
-if (defaultAdminUsername && defaultAdminPassword) {
-  bcrypt.hash(defaultAdminPassword, saltRounds, (err, hash) => {
-    if (err) {
-      console.error(`[ERROR] ${err.message}`);
-      return;
-    }
-    const query = 'INSERT OR IGNORE INTO admin_users(username, password) VALUES(?, ?)';
-    db.run(query, [defaultAdminUsername, hash], (err) => {
+async function initializeDatabase() {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database('./AccessControl.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
       if (err) {
-        console.error(`[ERROR] Could not add default admin: ${err.message}`);
+        reject(err);
         return;
       }
-      console.log(`[INFO] Default admin added successfully, username: ${defaultAdminUsername}`);
+      resolve(db);
     });
   });
 }
 
-app.use(express.json());
-app.use(express.static('public'));
+async function setup() {
+  const db = await initializeDatabase();
+  logger.info("Successfully initialized the database");
+  
+  const tableInitQueries = [
+    'CREATE TABLE IF NOT EXISTS admin_users (username TEXT, password TEXT)',
+    'CREATE TABLE IF NOT EXISTS valid_pins (pin TEXT)'
+  ];
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5
-});
+  for (const query of tableInitQueries) {
+    await db.run(query);
+  }
+
+  // Create a default admin if command line arguments are provided
+  const [defaultAdminUsername, defaultAdminPassword] = process.argv.slice(2);
+  if (defaultAdminUsername && defaultAdminPassword) {
+    bcrypt.hash(defaultAdminPassword, saltRounds, (err, hash) => {
+      if (err) {
+        logger.error(`[ERROR] ${err.message}`);
+        return;
+      }
+      const query = 'INSERT OR IGNORE INTO admin_users(username, password) VALUES(?, ?)';
+      db.run(query, [defaultAdminUsername, hash], (err) => {
+        if (err) {
+          logger.error(`Failed to add default admin`, {
+            error_message: err.message,
+            action: 'create_default_admin',
+            status: 'failure'
+          });
+          return;
+        }
+        logger.info(`Default admin added successfully`, {
+          username: defaultAdminUsername,
+          action: 'create_default_admin',
+          status: 'success'
+        });
+      });
+    });
+  }
+
+  return db;
+}
+
+setup().then(db => {
+  const dbGetAsync = util.promisify(db.get).bind(db);
+
+  app.use(express.json());
+  app.use(express.static('public'));
+
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5
+  });
 
 app.post('/admin-login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
@@ -73,6 +133,11 @@ app.post('/admin-login', loginLimiter, (req, res) => {
   const query = 'SELECT username, password FROM admin_users WHERE username = ?';
   db.get(query, [username], (err, row) => {
     if (err || !row) {
+      logger.error(`Invalid credentials provided`, {
+        username,
+        action: 'admin_login',
+        status: 'failure'
+      });
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -91,7 +156,7 @@ app.get('/admin_dashboard', (req, res) => {
   if (req.session.username) {
     res.sendFile(path.join(__dirname, 'secure/admin_dashboard.html'));
   } else {
-    res.status(401).json({ message: 'Please log in' });
+    res.status(401).sendFile(path.join(__dirname, 'public/unauthorized.html'));
   }
 });
 
@@ -113,6 +178,14 @@ app.post('/keypad-input', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`[INFO] Server running at http://localhost:${port}/`);
-  console.log('[INFO] You can add an admin user using: npm start -- [Username] [Password]');
+  logger.info(`Server started`, { environment: process.env.NODE_ENV, port });
+  logger.info(`Navigate to http://localhost:${port}/ to access the application`);
+
+});
+
+}).catch(err => {
+  logger.error(`Failed to set up database`, {
+    error_message: err.message,
+    stack: err.stack
+  });
 });
