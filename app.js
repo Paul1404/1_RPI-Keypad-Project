@@ -160,6 +160,80 @@ app.get('/admin_dashboard', (req, res) => {
   }
 });
 
+app.post('/add-pin', (req, res) => {
+  const { pin } = req.body;
+  const query = 'INSERT INTO valid_pins(pin) VALUES(?)';
+  db.run(query, [pin], (err) => {
+    if (err) {
+      logger.error(`Failed to add PIN`, {
+        error_message: err.message,
+        action: 'add_pin',
+        status: 'failure'
+      });
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+    logger.info(`Successfully added PIN`, {
+      pin,
+      action: 'add_pin',
+      status: 'success'
+    });
+    res.json({ message: 'PIN added successfully' });
+  });
+});
+
+app.post('/remove-pin', (req, res) => {
+  const { pin } = req.body;
+  const query = 'DELETE FROM valid_pins WHERE pin = ?';
+  db.run(query, [pin], (err) => {
+    if (err) {
+      logger.error(`Failed to remove PIN`, {
+        error_message: err.message,
+        action: 'remove_pin',
+        status: 'failure'
+      });
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+    logger.info(`Successfully removed PIN`, {
+      pin,
+      action: 'remove_pin',
+      status: 'success'
+    });
+    res.json({ message: 'PIN removed successfully' });
+  });
+});
+
+app.post('/add-admin', (req, res) => {
+  const { username, password } = req.body;
+  bcrypt.hash(password, saltRounds, (err, hash) => {
+    if (err) {
+      logger.error(`Failed to hash password`, {
+        error_message: err.message,
+        action: 'add_admin',
+        status: 'failure'
+      });
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+    const query = 'INSERT INTO admin_users(username, password) VALUES(?, ?)';
+    db.run(query, [username, hash], (err) => {
+      if (err) {
+        logger.error(`Failed to add admin`, {
+          error_message: err.message,
+          action: 'add_admin',
+          status: 'failure'
+        });
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+      logger.info(`Successfully added admin`, {
+        username,
+        action: 'add_admin',
+        status: 'success'
+      });
+      res.json({ message: 'Admin added successfully' });
+    });
+  });
+});
+
+
 app.post('/keypad-input', (req, res) => {
   const { pin } = req.body;
 

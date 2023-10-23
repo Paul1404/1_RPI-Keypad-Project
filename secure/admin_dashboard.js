@@ -18,7 +18,6 @@ document.addEventListener("DOMContentLoaded", function () {
     console.error('Error:', error);
   });
 
-  // Existing logic for adding PIN
   const form = document.getElementById("addPinForm");
   form.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -29,7 +28,6 @@ document.addEventListener("DOMContentLoaded", function () {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // No need to add token to request header
       },
       body: JSON.stringify({ pin: newPin }),
     })
@@ -44,5 +42,58 @@ document.addEventListener("DOMContentLoaded", function () {
     .catch((error) => {
       console.error("Error:", error);
     });
+  });
+});
+
+const removePinForm = document.getElementById("removePinForm");
+removePinForm.addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const removePin = document.getElementById("removePin").value;
+
+  fetch("/remove-pin", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ pin: removePin }),
+  })
+  .then((response) => response.json())
+  .then((data) => {
+    if (data.message === "PIN removed successfully") {
+      alert("PIN removed successfully");
+    } else {
+      alert("Failed to remove PIN");
+    }
+  })
+  .catch((error) => {
+    console.error("Error:", error);
+  });
+});
+
+const addAdminForm = document.getElementById("addAdminForm");
+addAdminForm.addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const adminUsername = document.getElementById("adminUsername").value;
+  const adminPassword = document.getElementById("adminPassword").value;
+
+  fetch("/add-admin", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username: adminUsername, password: adminPassword }),
+  })
+  .then((response) => response.json())
+  .then((data) => {
+    if (data.message === "Admin added successfully") {
+      alert("Admin added successfully");
+    } else {
+      alert("Failed to add admin");
+    }
+  })
+  .catch((error) => {
+    console.error("Error:", error);
   });
 });
