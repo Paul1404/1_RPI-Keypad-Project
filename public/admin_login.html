@@ -2,24 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Administrator Login</title>
+  <title>Welcome, Administrator! Please Log In</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="dial-pad.ico" type="image/x-icon">
 </head>
 <body>
   <div id="admin-container">
-    <h1 id="admin-title">Administrator Login</h1>
-    <form id="adminLoginForm">
-      <div class="input-group">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
-      </div>
-      <div class="input-group">
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-      </div>
-      <input type="submit" id="loginButton" value="Login">
-    </form>
+    <header>
+      <h1 id="admin-title">Welcome, Administrator!</h1>
+    </header>
+    <main>
+      <form id="adminLoginForm">
+        <div class="input-group">
+          <input type="text" id="username" name="username" aria-label="Username" placeholder="Username" required>
+        </div>
+        <div class="input-group">
+          <input type="password" id="password" name="password" aria-label="Password" placeholder="Password" required>
+        </div>
+        <input type="submit" id="loginButton" value="Login">
+      </form>
+    </main>
   </div>
   <script src="admin.js"></script>
 </body>
