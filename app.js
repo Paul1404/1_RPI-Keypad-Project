@@ -11,6 +11,7 @@ const app = express();
 require('dotenv').config();
 const winston = require('winston');
 const fs = require('fs');
+let db;
 
 const port = process.env.PORT || 3000;
 const secretKey = process.env.SECRET_KEY;
@@ -161,26 +162,40 @@ app.get('/admin_dashboard', (req, res) => {
   }
 });
 
-app.post('/add-pin', (req, res) => {
-  const { pin } = req.body;
-  const query = 'INSERT INTO valid_pins(pin) VALUES(?)';
-  db.run(query, [pin], (err) => {
-    if (err) {
-      logger.error(`Failed to add PIN`, {
-        error_message: err.message,
-        action: 'add_pin',
+  app.post('/add-pin', async (req, res) => {
+    const { pin } = req.body;
+
+    try {
+      // Hash the PIN
+      const hashedPin = await bcrypt.hash(pin, saltRounds);
+
+      // Insert the hashed PIN into the database
+      const query = 'INSERT INTO valid_pins(pin) VALUES(?)';
+      db.run(query, [hashedPin], (err) => {
+        if (err) {
+          logger.error(`Failed to add PIN`, {
+            error_message: err.message,
+            action: 'add_pin',
+            status: 'failure'
+          });
+          return res.status(500).json({ message: 'Internal Server Error' });
+        }
+        logger.info(`Successfully added PIN`, {
+          pin: hashedPin,  // Log the hashed PIN, not the original
+          action: 'add_pin',
+          status: 'success'
+        });
+        res.json({ message: 'PIN added successfully' });
+      });
+    } catch (error) {
+      logger.error(`Failed to hash PIN`, {
+        error_message: error.message,
+        action: 'hash_pin',
         status: 'failure'
       });
       return res.status(500).json({ message: 'Internal Server Error' });
     }
-    logger.info(`Successfully added PIN`, {
-      pin,
-      action: 'add_pin',
-      status: 'success'
-    });
-    res.json({ message: 'PIN added successfully' });
   });
-});
 
 app.post('/remove-pin', (req, res) => {
   const { pin } = req.body;
@@ -267,6 +282,7 @@ app.post('/keypad-input', (req, res) => {
     
     if (row) {
       return res.json({ message: 'PIN accepted' });
+
     } else {
       return res.json({ message: 'Invalid PIN' });
     }
@@ -285,3 +301,34 @@ app.listen(port, () => {
     stack: err.stack
   });
 });
+
+// Function to handle shutdown logic
+function handleShutdown() {
+  logger.info('Application is shutting down', {
+    action: 'shutdown',
+    status: 'info'
+  });
+
+  // Cleanup code: Close the SQLite database connection
+  db.close((err) => {
+    if (err) {
+      logger.error(`Failed to close the database`, {
+        error_message: err.message,
+        action: 'db_close',
+        status: 'failure'
+      });
+    } else {
+      logger.info(`Database closed successfully`, {
+        action: 'db_close',
+        status: 'success'
+      });
+    }
+  });
+
+  process.exit(0);
+}
+
+// Listening for shutdown signals
+process.on('exit', handleShutdown);
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);
