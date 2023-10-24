@@ -302,7 +302,7 @@ app.listen(port, () => {
   });
 });
 
-// Function to handle shutdown logic
+
 function handleShutdown() {
   logger.info('Application is shutting down', {
     action: 'shutdown',
