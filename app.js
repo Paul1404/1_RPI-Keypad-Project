@@ -1,3 +1,5 @@
+// noinspection JSValidateTypes
+
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
@@ -113,8 +115,7 @@ async function setup() {
 }
 
 setup().then(db => {
-  const dbGetAsync = util.promisify(db.get).bind(db);
-
+  util.promisify(db.get).bind(db);
   app.use(express.json());
   app.use(express.static('public'));
 
@@ -123,7 +124,7 @@ setup().then(db => {
     max: 5
   });
 
-app.post('/admin-login', loginLimiter, (req, res) => {
+  app.post('/admin-login', (req, res, next) => { loginLimiter(req, res, next); }, (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password || username.length < 4 || password.length < 6) {
