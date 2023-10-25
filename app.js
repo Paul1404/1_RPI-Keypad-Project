@@ -1,23 +1,46 @@
 // noinspection JSValidateTypes
 
-const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const bcrypt = require('bcrypt');
-const session = require('express-session');
-const rateLimit = require("express-rate-limit");
-const path = require('path');
-const util = require('util');
-const app = express();
-require('dotenv').config();
-const winston = require('winston');
-const fs = require('fs');
-let db;
+/**
+ * @fileoverview Main application entry point.
+ */
 
-const port = process.env.PORT || 3000;
-const secretKey = process.env.SECRET_KEY;
-const saltRounds = parseInt(process.env.SALT_ROUNDS, 10);
-const logDir = 'logs';
 
+// External Dependencies
+const express = require('express');  // Express.js web framework
+const sqlite3 = require('sqlite3').verbose();  // SQLite3 database driver with verbose logging
+const bcrypt = require('bcrypt');  // Library for hashing passwords
+const session = require('express-session');  // Session management library
+const rateLimit = require("express-rate-limit");  // Rate limiting middleware
+const path = require('path');  // Node.js path module for file and directory paths
+const util = require('util');  // Utility functions for debugging
+const winston = require('winston');  // Logging library
+const fs = require('fs');  // File system module
+
+// Internal Dependencies
+require('dotenv').config();  // Load environment variables from .env file
+
+// Global Variables
+const app = express();  // Initialize Express app
+let db;  // Database connection variable
+
+// Environment variables and constants
+const port = process.env.PORT || 3000;  // Application port
+const secretKey = process.env.SECRET_KEY;  // Secret key for sessions
+const saltRounds = parseInt(process.env.SALT_ROUNDS, 10);  // Salt rounds for bcrypt hashing
+const logDir = 'logs';  // Directory for storing logs
+
+
+/**
+ * Initializes and configures the Winston logger.
+ * 
+ * This function performs the following tasks:
+ * - Creates a 'logs' directory if it doesn't exist.
+ * - Limits the log files to 100 lines each.
+ * - Sets up the log format.
+ * - Configures the log transports (file and console).
+ *
+ * @returns {Object} The configured Winston logger instance.
+ */
 function initializeLogger() {
   // Create the logs directory if it does not exist
   if (!fs.existsSync(logDir)) {
@@ -35,7 +58,7 @@ function initializeLogger() {
     }
   });
 
-  // Formatting
+  // Define log format
   const humanReadableFormat = winston.format.printf(({ level, message, label, timestamp, ...metadata }) => {
     let msg = `${timestamp} [${level}] : ${message} `;
     if (Object.keys(metadata).length > 0) {
@@ -44,7 +67,7 @@ function initializeLogger() {
     return msg;
   });
 
-  // Logger configuration
+  // Configure logger
   const logger = winston.createLogger({
     level: 'info',
     transports: [
@@ -80,12 +103,18 @@ function initializeLogger() {
   return logger;
 }
 
-
-// Initialize logger
+/**
+ * Initialize the Winston logger.
+ * 
+ * @type {Object}
+ */
 const logger = initializeLogger();
 
 
-// Initialize session middleware
+
+/**
+ * Initializes the session middleware for the application.
+ */
 app.use(session({
   secret: secretKey,
   resave: false,
@@ -93,9 +122,16 @@ app.use(session({
   cookie: { secure: false } // Use secure: true in production!!!
 }));
 
+
+/**
+ * Initializes the SQLite database.
+ *
+ * @returns {Promise<Object>} A promise that resolves with the database instance or rejects with an error.
+ */
 async function initializeDatabase() {
   return new Promise((resolve, reject) => {
-    db = new sqlite3.Database('./AccessControl.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {  // Removed 'const'
+    // Initialize SQLite database
+    db = new sqlite3.Database('./AccessControl.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
       if (err) {
         reject(err);
         return;
@@ -105,15 +141,24 @@ async function initializeDatabase() {
   });
 }
 
+
+/**
+ * Setup function to initialize the database, create tables, and add a default admin.
+ *
+ * @returns {Promise<Object>} A promise that resolves with the initialized database instance.
+ */
 async function setup() {
+  // Initialize database
   const db = await initializeDatabase();
   logger.info("Successfully initialized the database");
   
+  // SQL queries to initialize tables
   const tableInitQueries = [
     'CREATE TABLE IF NOT EXISTS admin_users (username TEXT, password TEXT)',
     'CREATE TABLE IF NOT EXISTS valid_pins (pin TEXT)'
   ];
 
+  // Create tables
   for (const query of tableInitQueries) {
     await db.run(query);
   }
@@ -148,24 +193,50 @@ async function setup() {
   return db;
 }
 
+
+/**
+ * Main setup routine.
+ */
 setup().then(db => {
+  // Promisify database queries
   util.promisify(db.get).bind(db);
+
+  // Enable JSON parsing
   app.use(express.json());
+
+  // Serve static files
   app.use(express.static('public'));
 
+  // Configure login rate limiter
   const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5
   });
+}).catch(err => {
+  logger.error(`Failed to set up database`, {
+    error_message: err.message,
+    stack: err.stack
+  });
+});
 
-  app.post('/admin-login', (req, res, next) => { loginLimiter(req, res, next); }, (req, res) => {
+
+/**
+ * POST route for admin login.
+ * Applies rate limiting using the 'loginLimiter' middleware and then handles the login logic.
+ */
+app.post('/admin-login', (req, res, next) => { loginLimiter(req, res, next); }, (req, res) => {
+  // Extract username and password from request body
   const { username, password } = req.body;
 
+  // Validate input length
   if (!username || !password || username.length < 4 || password.length < 6) {
     return res.status(400).json({ message: "Invalid input" });
   }
 
+  // SQL query to fetch user
   const query = 'SELECT username, password FROM admin_users WHERE username = ?';
+  
+  // Execute query and handle response
   db.get(query, [username], (err, row) => {
     if (err || !row) {
       logger.error(`Invalid credentials provided`, {
@@ -176,63 +247,92 @@ setup().then(db => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Compare hashed password
     bcrypt.compare(password, row.password, (err, match) => {
       if (match) {
+        // Store username in session and send success response
         req.session.username = username;
         return res.json({ message: 'Login successful' });
       } else {
+        // Send failure response
         return res.status(401).json({ message: 'Invalid credentials' });
       }
     });
   });
 });
 
+
+/**
+ * GET route for the admin dashboard.
+ * Serves the admin dashboard HTML file if the user is authenticated.
+ */
 app.get('/admin_dashboard', (req, res) => {
+  // Check for authenticated session
   if (req.session.username) {
+    // Send admin dashboard HTML
     res.sendFile(path.join(__dirname, 'public/admin_dashboard.html'));
   } else {
+    // Send unauthorized HTML
     res.status(401).sendFile(path.join(__dirname, 'public/unauthorized.html'));
   }
 });
 
-  app.post('/add-pin', async (req, res) => {
-    const { pin } = req.body;
 
-    try {
-      // Hash the PIN
-      const hashedPin = await bcrypt.hash(pin, saltRounds);
-
-      // Insert the hashed PIN into the database
-      const query = 'INSERT INTO valid_pins(pin) VALUES(?)';
-      db.run(query, [hashedPin], (err) => {
-        if (err) {
-          logger.error(`Failed to add PIN`, {
-            error_message: err.message,
-            action: 'add_pin',
-            status: 'failure'
-          });
-          return res.status(500).json({ message: 'Internal Server Error' });
-        }
-        logger.info(`Successfully added PIN`, {
-          pin: hashedPin,  // Log the hashed PIN, not the original
-          action: 'add_pin',
-          status: 'success'
-        });
-        res.json({ message: 'PIN added successfully' });
-      });
-    } catch (error) {
-      logger.error(`Failed to hash PIN`, {
-        error_message: error.message,
-        action: 'hash_pin',
-        status: 'failure'
-      });
-      return res.status(500).json({ message: 'Internal Server Error' });
-    }
-  });
-
-app.post('/remove-pin', (req, res) => {
+/**
+ * POST route to add a new PIN.
+ * Hashes the provided PIN and saves it to the database.
+ */
+app.post('/add-pin', async (req, res) => {
+  // Extract PIN from request body
   const { pin } = req.body;
+
+  try {
+    // Hash the PIN using bcrypt
+    const hashedPin = await bcrypt.hash(pin, saltRounds);
+
+    // SQL query to insert hashed PIN
+    const query = 'INSERT INTO valid_pins(pin) VALUES(?)';
+
+    // Execute query and handle response
+    db.run(query, [hashedPin], (err) => {
+      if (err) {
+        logger.error(`Failed to add PIN`, {
+          error_message: err.message,
+          action: 'add_pin',
+          status: 'failure'
+        });
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+      logger.info(`Successfully added PIN`, {
+        pin: hashedPin,  // Log the hashed PIN, not the original
+        action: 'add_pin',
+        status: 'success'
+      });
+      res.json({ message: 'PIN added successfully' });
+    });
+  } catch (error) {
+    logger.error(`Failed to hash PIN`, {
+      error_message: error.message,
+      action: 'hash_pin',
+      status: 'failure'
+    });
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+
+/**
+ * POST route to remove an existing PIN.
+ * Deletes the provided PIN from the database.
+ */
+app.post('/remove-pin', (req, res) => {
+  // Extract PIN from request body
+  const { pin } = req.body;
+
+  // SQL query to delete PIN
   const query = 'DELETE FROM valid_pins WHERE pin = ?';
+
+  // Execute query and handle response
   db.run(query, [pin], (err) => {
     if (err) {
       logger.error(`Failed to remove PIN`, {
@@ -251,8 +351,16 @@ app.post('/remove-pin', (req, res) => {
   });
 });
 
+
+/**
+ * POST route to add a new admin user.
+ * Hashes the provided password and saves the new admin to the database.
+ */
 app.post('/add-admin', (req, res) => {
+  // Extract username and password from request body
   const { username, password } = req.body;
+
+  // Hash the password using bcrypt
   bcrypt.hash(password, saltRounds, (err, hash) => {
     if (err) {
       logger.error(`Failed to hash password`, {
@@ -262,7 +370,11 @@ app.post('/add-admin', (req, res) => {
       });
       return res.status(500).json({ message: 'Internal Server Error' });
     }
+
+    // SQL query to insert new admin
     const query = 'INSERT INTO admin_users(username, password) VALUES(?, ?)';
+
+    // Execute query and handle response
     db.run(query, [username, hash], (err) => {
       if (err) {
         logger.error(`Failed to add admin`, {
@@ -282,9 +394,19 @@ app.post('/add-admin', (req, res) => {
   });
 });
 
+
+/**
+ * POST route to remove an existing admin user.
+ * Deletes the provided username from the admin_users table in the database.
+ */
 app.post('/remove-admin', (req, res) => {
+  // Extract username from request body
   const { username } = req.body;
+
+  // SQL query to delete admin
   const query = 'DELETE FROM admin_users WHERE username = ?';
+
+  // Execute query and handle response
   db.run(query, [username], (err) => {
     if (err) {
       logger.error(`Failed to remove admin`, {
@@ -304,101 +426,97 @@ app.post('/remove-admin', (req, res) => {
 });
 
 
-  app.post('/keypad-input', async (req, res) => {
-    const { pin } = req.body;
+/**
+ * POST route to handle keypad PIN input.
+ * Checks the provided PIN against a list of valid PINs stored in the database.
+ */
+app.post('/keypad-input', async (req, res) => {
+  // Extract PIN from request body
+  const { pin } = req.body;
 
-    logger.info('Received PIN:', pin);  // Debugging line
+  // SQL query to fetch all valid PINs
+  const query = 'SELECT pin FROM valid_pins';
 
-    // Fetch all hashed PINs or the specific one based on some other criterion, e.g., user ID
-    const query = 'SELECT pin FROM valid_pins';
-    db.all(query, [], async (err, rows) => {
-      if (err) {
-        logger.error('Database Error:', err);
+  // Execute query and handle response
+  db.all(query, [], async (err, rows) => {
+    if (err) {
+      logger.error('Database Error:', err);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+
+    // Compare entered PIN with each stored PIN
+    for (const row of rows) {
+      try {
+        const isValidPin = await bcrypt.compare(pin, row.pin);
+        if (isValidPin) {
+          return res.redirect('/public/server-room.html');
+        }
+      } catch (error) {
+        logger.error('Bcrypt Error:', error);
         return res.status(500).json({ message: 'Internal Server Error' });
       }
+    }
 
-      logger.info('Fetched rows:', rows);  // Debugging line
-
-      // Loop through each hashed PIN to see if it matches
-      for (const row of rows) {
-        try {
-          const isValidPin = await bcrypt.compare(pin, row.pin);
-
-          logger.info(`Comparing entered PIN ${pin} with stored PIN ${row.pin}:`, isValidPin);  // Debugging line
-
-          if (isValidPin) {
-            logger.info('Valid PIN. Redirecting...');  // Debugging line
-            return res.redirect('/public/server-room.html');
-          }
-        } catch (error) {
-          logger.error('Bcrypt Error:', error);
-          return res.status(500).json({ message: 'Internal Server Error' });
-        }
-      }
-
-      // If loop finishes, and we haven't returned yet, then the PIN was invalid
-      logger.info('Invalid PIN. Not Redirecting...');  // Debugging line
-      return res.json({ message: 'Invalid PIN' });
-    });
+    // If PIN is invalid
+    return res.json({ message: 'Invalid PIN' });
   });
+});
 
 
-
-
+/**
+ * Starts the Express server.
+ * Listens for incoming connections on the specified port.
+ */
 app.listen(port, () => {
   logger.info(`Server started`, { environment: process.env.NODE_ENV, port });
   logger.info(`Navigate to http://localhost:${port}/ to access the application`);
-
-});
-
-}).catch(err => {
-  logger.error(`Failed to set up database`, {
-    error_message: err.message,
-    stack: err.stack
-  });
 });
 
 
+/**
+ * Gracefully shuts down the application.
+ * Attempts to close the SQLite database connection and then terminates the process.
+ */
 async function handleShutdown() {
-    try {
-        logger.info('Application is shutting down', {
-            action: 'shutdown',
-            status: 'info'
-        });
+  try {
+    logger.info('Application is shutting down', {
+      action: 'shutdown',
+      status: 'info'
+    });
 
-        // Cleanup code: Close the SQLite database connection
-        await new Promise((resolve, reject) => {
-            logger.info('Attempting to close database...');
-            db.close((err) => {
-                if (err) {
-                    logger.error(`Failed to close the database`, {
-                        error_message: err.message,
-                        action: 'db_close',
-                        status: 'failure'
-                    });
-                    return reject(err);
-                }
-
-                logger.info(`Database closed successfully`, {
-                    action: 'db_close',
-                    status: 'success'
-                });
-
-                resolve();
-            });
-        });
-    } catch (err) {
-        logger.error('An error occurred during shutdown', {
+    // Attempt to close the SQLite database connection
+    await new Promise((resolve, reject) => {
+      logger.info('Attempting to close database...');
+      db.close((err) => {
+        if (err) {
+          logger.error(`Failed to close the database`, {
             error_message: err.message,
-            action: 'shutdown',
+            action: 'db_close',
             status: 'failure'
+          });
+          return reject(err);
+        }
+
+        logger.info(`Database closed successfully`, {
+          action: 'db_close',
+          status: 'success'
         });
-    } finally {
-        // Delay the exit by 2 seconds to allow logger to complete
-        setTimeout(() => {
-            process.exit(0);
-        }, 2000);
-    }
+
+        resolve();
+      });
+    });
+  } catch (err) {
+    logger.error('An error occurred during shutdown', {
+      error_message: err.message,
+      action: 'shutdown',
+      status: 'failure'
+    });
+  } finally {
+    // Delay the process exit by 2 seconds to allow logger to complete
+    setTimeout(() => {
+      process.exit(0);
+    }, 2000);
+  }
 }
 
 
