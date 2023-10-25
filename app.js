@@ -95,7 +95,7 @@ app.use(session({
 
 async function initializeDatabase() {
   return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database('./AccessControl.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+    db = new sqlite3.Database('./AccessControl.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {  // Removed 'const'
       if (err) {
         reject(err);
         return;
@@ -360,45 +360,54 @@ app.listen(port, () => {
 
 
 async function handleShutdown() {
-  try {
-    logger.info('Application is shutting down', {
-      action: 'shutdown',
-      status: 'info'
-    });
-
-    // Cleanup code: Close the SQLite database connection
-    await new Promise((resolve, reject) => {
-      db.close((err) => {
-        if (err) {
-          logger.error(`Failed to close the database`, {
-            error_message: err.message,
-            action: 'db_close',
-            status: 'failure'
-          });
-          return reject(err);
-        }
-
-        logger.info(`Database closed successfully`, {
-          action: 'db_close',
-          status: 'success'
+    try {
+        logger.info('Application is shutting down', {
+            action: 'shutdown',
+            status: 'info'
         });
 
-        resolve();
-      });
-    });
-  } catch (err) {
-    // Handle error if needed
-  } finally {
-    process.exit(0);
-  }
+        // Cleanup code: Close the SQLite database connection
+        await new Promise((resolve, reject) => {
+            logger.info('Attempting to close database...');
+            db.close((err) => {
+                if (err) {
+                    logger.error(`Failed to close the database`, {
+                        error_message: err.message,
+                        action: 'db_close',
+                        status: 'failure'
+                    });
+                    return reject(err);
+                }
+
+                logger.info(`Database closed successfully`, {
+                    action: 'db_close',
+                    status: 'success'
+                });
+
+                resolve();
+            });
+        });
+    } catch (err) {
+        logger.error('An error occurred during shutdown', {
+            error_message: err.message,
+            action: 'shutdown',
+            status: 'failure'
+        });
+    } finally {
+        // Delay the exit by 2 seconds to allow logger to complete
+        setTimeout(() => {
+            process.exit(0);
+        }, 2000);
+    }
 }
+
 
 process.stdin.setRawMode(true);
 process.stdin.resume();
 process.stdin.on('data', async (key) => {
   // Custom exit sequence: Ctrl+X
   if (key.toString() === '\u0018') {
-    console.log('Caught (CTRL+X) Sequence. Shutting down...');
+    logger.info('Caught (CTRL+X) Sequence. Shutting down...');
     await handleShutdown();
     process.exit(0);
   }
