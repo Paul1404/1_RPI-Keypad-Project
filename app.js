@@ -1,3 +1,5 @@
+// noinspection JSValidateTypes
+
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
@@ -9,46 +11,80 @@ const app = express();
 require('dotenv').config();
 const winston = require('winston');
 const fs = require('fs');
+let db;
 
 const port = process.env.PORT || 3000;
 const secretKey = process.env.SECRET_KEY;
 const saltRounds = parseInt(process.env.SALT_ROUNDS, 10);
 const logDir = 'logs';
 
-const humanReadableFormat = winston.format.printf(({ level, message, label, timestamp, ...metadata }) => {
-  let msg = `${timestamp} [${level}] : ${message} `
-  if(metadata) {
-    msg += JSON.stringify(metadata)
+function initializeLogger() {
+  // Create the logs directory if it does not exist
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir);
   }
-  return msg
-});
 
-// Create the logs directory if it does not exist
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir);
+  // Limit lines to 100 for each log file
+  ['error.log', 'combined.log'].forEach((logFile) => {
+    const filePath = `${logDir}/${logFile}`;
+    if (fs.existsSync(filePath)) {
+      const lines = fs.readFileSync(filePath, 'utf-8').split('\n').filter(Boolean);
+      if (lines.length >= 100) {
+        fs.writeFileSync(filePath, lines.slice(lines.length - 100).join('\n') + '\n');
+      }
+    }
+  });
+
+  // Formatting
+  const humanReadableFormat = winston.format.printf(({ level, message, label, timestamp, ...metadata }) => {
+    let msg = `${timestamp} [${level}] : ${message} `;
+    if (Object.keys(metadata).length > 0) {
+      msg += JSON.stringify(metadata);
+    }
+    return msg;
+  });
+
+  // Logger configuration
+  const logger = winston.createLogger({
+    level: 'info',
+    transports: [
+      new winston.transports.File({
+        filename: `${logDir}/error.log`,
+        level: 'error',
+        format: winston.format.combine(
+            winston.format.timestamp(),
+            humanReadableFormat
+        )
+      }),
+      new winston.transports.File({
+        filename: `${logDir}/combined.log`,
+        format: winston.format.combine(
+            winston.format.timestamp(),
+            humanReadableFormat
+        )
+      }),
+      new winston.transports.Console({
+        format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.timestamp(),
+            humanReadableFormat
+        )
+      })
+    ]
+  });
+
+  // Test logging
+  logger.info('Test-Information message', { meta: 'some meta data' });
+  logger.error('Test-Error message', { error: 'an error occurred' });
+
+  return logger;
 }
 
-// Configure Winston
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-  ],
-});
+
+// Initialize logger
+const logger = initializeLogger();
 
 
-// If we're not in production then also log to the console
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.timestamp(),
-      humanReadableFormat
-    )
-  }));
-}
 // Initialize session middleware
 app.use(session({
   secret: secretKey,
@@ -59,7 +95,7 @@ app.use(session({
 
 async function initializeDatabase() {
   return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database('./AccessControl.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+    db = new sqlite3.Database('./AccessControl.db', sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {  // Removed 'const'
       if (err) {
         reject(err);
         return;
@@ -113,8 +149,7 @@ async function setup() {
 }
 
 setup().then(db => {
-  const dbGetAsync = util.promisify(db.get).bind(db);
-
+  util.promisify(db.get).bind(db);
   app.use(express.json());
   app.use(express.static('public'));
 
@@ -123,7 +158,7 @@ setup().then(db => {
     max: 5
   });
 
-app.post('/admin-login', loginLimiter, (req, res) => {
+  app.post('/admin-login', (req, res, next) => { loginLimiter(req, res, next); }, (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password || username.length < 4 || password.length < 6) {
@@ -160,26 +195,40 @@ app.get('/admin_dashboard', (req, res) => {
   }
 });
 
-app.post('/add-pin', (req, res) => {
-  const { pin } = req.body;
-  const query = 'INSERT INTO valid_pins(pin) VALUES(?)';
-  db.run(query, [pin], (err) => {
-    if (err) {
-      logger.error(`Failed to add PIN`, {
-        error_message: err.message,
-        action: 'add_pin',
+  app.post('/add-pin', async (req, res) => {
+    const { pin } = req.body;
+
+    try {
+      // Hash the PIN
+      const hashedPin = await bcrypt.hash(pin, saltRounds);
+
+      // Insert the hashed PIN into the database
+      const query = 'INSERT INTO valid_pins(pin) VALUES(?)';
+      db.run(query, [hashedPin], (err) => {
+        if (err) {
+          logger.error(`Failed to add PIN`, {
+            error_message: err.message,
+            action: 'add_pin',
+            status: 'failure'
+          });
+          return res.status(500).json({ message: 'Internal Server Error' });
+        }
+        logger.info(`Successfully added PIN`, {
+          pin: hashedPin,  // Log the hashed PIN, not the original
+          action: 'add_pin',
+          status: 'success'
+        });
+        res.json({ message: 'PIN added successfully' });
+      });
+    } catch (error) {
+      logger.error(`Failed to hash PIN`, {
+        error_message: error.message,
+        action: 'hash_pin',
         status: 'failure'
       });
       return res.status(500).json({ message: 'Internal Server Error' });
     }
-    logger.info(`Successfully added PIN`, {
-      pin,
-      action: 'add_pin',
-      status: 'success'
-    });
-    res.json({ message: 'PIN added successfully' });
   });
-});
 
 app.post('/remove-pin', (req, res) => {
   const { pin } = req.body;
@@ -255,22 +304,46 @@ app.post('/remove-admin', (req, res) => {
 });
 
 
-app.post('/keypad-input', (req, res) => {
-  const { pin } = req.body;
+  app.post('/keypad-input', async (req, res) => {
+    const { pin } = req.body;
 
-  const query = 'SELECT pin FROM valid_pins WHERE pin = ?';
-  db.get(query, [pin], (err, row) => {
-    if (err) {
-      return res.status(500).json({ message: 'Internal Server Error' });
-    }
-    
-    if (row) {
-      return res.json({ message: 'PIN accepted' });
-    } else {
+    logger.info('Received PIN:', pin);  // Debugging line
+
+    // Fetch all hashed PINs or the specific one based on some other criterion, e.g., user ID
+    const query = 'SELECT pin FROM valid_pins';
+    db.all(query, [], async (err, rows) => {
+      if (err) {
+        logger.error('Database Error:', err);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+
+      logger.info('Fetched rows:', rows);  // Debugging line
+
+      // Loop through each hashed PIN to see if it matches
+      for (const row of rows) {
+        try {
+          const isValidPin = await bcrypt.compare(pin, row.pin);
+
+          logger.info(`Comparing entered PIN ${pin} with stored PIN ${row.pin}:`, isValidPin);  // Debugging line
+
+          if (isValidPin) {
+            logger.info('Valid PIN. Redirecting...');  // Debugging line
+            return res.redirect('/public/server-room.html');
+          }
+        } catch (error) {
+          logger.error('Bcrypt Error:', error);
+          return res.status(500).json({ message: 'Internal Server Error' });
+        }
+      }
+
+      // If loop finishes, and we haven't returned yet, then the PIN was invalid
+      logger.info('Invalid PIN. Not Redirecting...');  // Debugging line
       return res.json({ message: 'Invalid PIN' });
-    }
+    });
   });
-});
+
+
+
 
 app.listen(port, () => {
   logger.info(`Server started`, { environment: process.env.NODE_ENV, port });
@@ -283,4 +356,59 @@ app.listen(port, () => {
     error_message: err.message,
     stack: err.stack
   });
+});
+
+
+async function handleShutdown() {
+    try {
+        logger.info('Application is shutting down', {
+            action: 'shutdown',
+            status: 'info'
+        });
+
+        // Cleanup code: Close the SQLite database connection
+        await new Promise((resolve, reject) => {
+            logger.info('Attempting to close database...');
+            db.close((err) => {
+                if (err) {
+                    logger.error(`Failed to close the database`, {
+                        error_message: err.message,
+                        action: 'db_close',
+                        status: 'failure'
+                    });
+                    return reject(err);
+                }
+
+                logger.info(`Database closed successfully`, {
+                    action: 'db_close',
+                    status: 'success'
+                });
+
+                resolve();
+            });
+        });
+    } catch (err) {
+        logger.error('An error occurred during shutdown', {
+            error_message: err.message,
+            action: 'shutdown',
+            status: 'failure'
+        });
+    } finally {
+        // Delay the exit by 2 seconds to allow logger to complete
+        setTimeout(() => {
+            process.exit(0);
+        }, 2000);
+    }
+}
+
+
+process.stdin.setRawMode(true);
+process.stdin.resume();
+process.stdin.on('data', async (key) => {
+  // Custom exit sequence: Ctrl+X
+  if (key.toString() === '\u0018') {
+    logger.info('Caught (CTRL+X) Sequence. Shutting down...');
+    await handleShutdown();
+    process.exit(0);
+  }
 });
