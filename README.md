@@ -1,25 +1,25 @@
-# RPI Keypad Project
+# 🛠 RPI Keypad Project
 
-## About
+## 🌟 About
 
 Welcome to the RPI Keypad Project! This project simulates a keypad and provides a backend dashboard for administration. It serves as a simulation model for an upcoming school project.
 
-![Project Screenshot](https://i.imgur.com/SSviy3M.jpg)
+![Imgur](https://i.imgur.com/JaLMXXx.jpg)
 
-## Features
+## 🚀 Features
 
-- Keypad simulation
-- Backend dashboard for administration
-- More features to come!
+* 🔢 Keypad simulation
+* 🖥 Backend dashboard for administration
+* ✨ More features to come!
 
-## Prerequisites
+## 📋 Prerequisites
 
 Before you begin, ensure you have met the following requirements:
 
-- [Node.js and npm](https://nodejs.org/en/download/)
-- [Git](https://git-scm.com/downloads)
+* 📦 [Node.js and npm](https://nodejs.org/en/download/)
+* 🌐 [Git](https://git-scm.com/downloads)
 
-## Installation & Usage
+## 🛠 Installation & Usage
 
 Clone the repository and navigate to the project directory:
 
@@ -40,14 +40,16 @@ Run the project:
 npm start
 ```
 
-## Hardware Requirements
+## 🖥 Hardware Requirements
 
 No specific hardware requirements for now, but hardware connectivity is planned for future updates.
 
-## Contributing
+## 🤝 Contributing
 
 If you want to contribute to the project, please fork the repository and create a pull request, or simply open an issue for any bug or suggestion you may have.
 
-## License
+## 📝 License
 
 This project uses the following license: [MIT License](LICENSE).
+
+* * *
