@@ -18,40 +18,73 @@ const secretKey = process.env.SECRET_KEY;
 const saltRounds = parseInt(process.env.SALT_ROUNDS, 10);
 const logDir = 'logs';
 
-const humanReadableFormat = winston.format.printf(({ level, message, label, timestamp, ...metadata }) => {
-  let msg = `${timestamp} [${level}] : ${message} `
-  if(metadata) {
-    msg += JSON.stringify(metadata)
+function initializeLogger() {
+  // Create the logs directory if it does not exist
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir);
   }
-  return msg
-});
 
-// Create the logs directory if it does not exist
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir);
+  // Limit lines to 100 for each log file
+  ['error.log', 'combined.log'].forEach((logFile) => {
+    const filePath = `${logDir}/${logFile}`;
+    if (fs.existsSync(filePath)) {
+      const lines = fs.readFileSync(filePath, 'utf-8').split('\n').filter(Boolean);
+      if (lines.length >= 100) {
+        fs.writeFileSync(filePath, lines.slice(lines.length - 100).join('\n') + '\n');
+      }
+    }
+  });
+
+  // Formatting
+  const humanReadableFormat = winston.format.printf(({ level, message, label, timestamp, ...metadata }) => {
+    let msg = `${timestamp} [${level}] : ${message} `;
+    if (Object.keys(metadata).length > 0) {
+      msg += JSON.stringify(metadata);
+    }
+    return msg;
+  });
+
+  // Logger configuration
+  const logger = winston.createLogger({
+    level: 'info',
+    transports: [
+      new winston.transports.File({
+        filename: `${logDir}/error.log`,
+        level: 'error',
+        format: winston.format.combine(
+            winston.format.timestamp(),
+            humanReadableFormat
+        )
+      }),
+      new winston.transports.File({
+        filename: `${logDir}/combined.log`,
+        format: winston.format.combine(
+            winston.format.timestamp(),
+            humanReadableFormat
+        )
+      }),
+      new winston.transports.Console({
+        format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.timestamp(),
+            humanReadableFormat
+        )
+      })
+    ]
+  });
+
+  // Test logging
+  logger.info('Test-Information message', { meta: 'some meta data' });
+  logger.error('Test-Error message', { error: 'an error occurred' });
+
+  return logger;
 }
 
-// Configure Winston
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-  ],
-});
+
+// Initialize logger
+const logger = initializeLogger();
 
 
-// If we're not in production then also log to the console
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.timestamp(),
-      humanReadableFormat
-    )
-  }));
-}
 // Initialize session middleware
 app.use(session({
   secret: secretKey,
@@ -271,23 +304,46 @@ app.post('/remove-admin', (req, res) => {
 });
 
 
-app.post('/keypad-input', (req, res) => {
-  const { pin } = req.body;
+  app.post('/keypad-input', async (req, res) => {
+    const { pin } = req.body;
 
-  const query = 'SELECT pin FROM valid_pins WHERE pin = ?';
-  db.get(query, [pin], (err, row) => {
-    if (err) {
-      return res.status(500).json({ message: 'Internal Server Error' });
-    }
-    
-    if (row) {
-      return res.json({ message: 'PIN accepted' });
+    logger.info('Received PIN:', pin);  // Debugging line
 
-    } else {
+    // Fetch all hashed PINs or the specific one based on some other criterion, e.g., user ID
+    const query = 'SELECT pin FROM valid_pins';
+    db.all(query, [], async (err, rows) => {
+      if (err) {
+        logger.error('Database Error:', err);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+
+      logger.info('Fetched rows:', rows);  // Debugging line
+
+      // Loop through each hashed PIN to see if it matches
+      for (const row of rows) {
+        try {
+          const isValidPin = await bcrypt.compare(pin, row.pin);
+
+          logger.info(`Comparing entered PIN ${pin} with stored PIN ${row.pin}:`, isValidPin);  // Debugging line
+
+          if (isValidPin) {
+            logger.info('Valid PIN. Redirecting...');  // Debugging line
+            return res.redirect('/server-room.html');
+          }
+        } catch (error) {
+          logger.error('Bcrypt Error:', error);
+          return res.status(500).json({ message: 'Internal Server Error' });
+        }
+      }
+
+      // If loop finishes, and we haven't returned yet, then the PIN was invalid
+      logger.info('Invalid PIN. Not Redirecting...');  // Debugging line
       return res.json({ message: 'Invalid PIN' });
-    }
+    });
   });
-});
+
+
+
 
 app.listen(port, () => {
   logger.info(`Server started`, { environment: process.env.NODE_ENV, port });
@@ -303,29 +359,38 @@ app.listen(port, () => {
 });
 
 
-function handleShutdown() {
-  logger.info('Application is shutting down', {
-    action: 'shutdown',
-    status: 'info'
-  });
+async function handleShutdown() {
+  try {
+    logger.info('Application is shutting down', {
+      action: 'shutdown',
+      status: 'info'
+    });
 
-  // Cleanup code: Close the SQLite database connection
-  db.close((err) => {
-    if (err) {
-      logger.error(`Failed to close the database`, {
-        error_message: err.message,
-        action: 'db_close',
-        status: 'failure'
-      });
-    } else {
-      logger.info(`Database closed successfully`, {
-        action: 'db_close',
-        status: 'success'
-      });
-    }
-  });
+    // Cleanup code: Close the SQLite database connection
+    await new Promise((resolve, reject) => {
+      db.close((err) => {
+        if (err) {
+          logger.error(`Failed to close the database`, {
+            error_message: err.message,
+            action: 'db_close',
+            status: 'failure'
+          });
+          return reject(err);
+        }
 
-  process.exit(0);
+        logger.info(`Database closed successfully`, {
+          action: 'db_close',
+          status: 'success'
+        });
+
+        resolve();
+      });
+    });
+  } catch (err) {
+    // Handle error if needed
+  } finally {
+    process.exit(0);
+  }
 }
 
 // Listening for shutdown signals
