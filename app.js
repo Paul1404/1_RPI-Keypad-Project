@@ -479,14 +479,17 @@ app.listen(port, () => {
  */
 async function handleShutdown() {
   try {
-    logger.info('Application is shutting down', {
+    logger.info('Entering handleShutdown', {
       action: 'shutdown',
-      status: 'info'
+      status: 'debug'
     });
 
-    // Attempt to close the SQLite database connection
+    // Cleanup code: Close the SQLite database connection
     await new Promise((resolve, reject) => {
-      logger.info('Attempting to close database...');
+      logger.info('Attempting to close database...', {
+        action: 'db_close',
+        status: 'info'
+      });
       db.close((err) => {
         if (err) {
           logger.error(`Failed to close the database`, {
@@ -501,9 +504,14 @@ async function handleShutdown() {
           action: 'db_close',
           status: 'success'
         });
-
         resolve();
       });
+    });
+
+    logger.end();
+    // Wait for all logs to be written
+    logger.on('finish', () => {
+      process.exit(0);
     });
   } catch (err) {
     logger.error('An error occurred during shutdown', {
@@ -511,13 +519,10 @@ async function handleShutdown() {
       action: 'shutdown',
       status: 'failure'
     });
-  } finally {
-    // Delay the process exit by 2 seconds to allow logger to complete
-    setTimeout(() => {
-      process.exit(0);
-    }, 2000);
+    process.exit(1);
   }
 }
+
 
 
 process.stdin.setRawMode(true);
