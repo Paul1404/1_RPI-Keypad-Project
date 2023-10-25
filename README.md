@@ -1,82 +1,53 @@
-# 🚪 Access Control System
+# RPI Keypad Project
 
-This is a simple Access Control System implemented in Node.js using Express, SQLite, and JSON Web Tokens (JWT). It allows authorized users to log in and access an admin dashboard.
+## About
 
-### ⚠️ This is still extremly work in progress with sessions not working correctly yet and the overall login not being secure!!!
+Welcome to the RPI Keypad Project! This project simulates a keypad and provides a backend dashboard for administration. It serves as a simulation model for an upcoming school project.
 
-## 🌟 Features
+![Project Screenshot](https://i.imgur.com/SSviy3M.jpg)
 
-- 💻 User authentication using a username and password.
-- 🛡️ Rate limiting for login attempts.
-- 🔒 Secure storage of user credentials using bcrypt.
-- 🔑 Token-based authentication and authorization using JWT.
-- 🚀 Admin dashboard accessible to authenticated users.
+## Features
 
-## 🚀 Getting Started
+- Keypad simulation
+- Backend dashboard for administration
+- More features to come!
 
-Follow these instructions to set up and run the project locally.
+## Prerequisites
 
-### 📋 Prerequisites
+Before you begin, ensure you have met the following requirements:
 
-- [Node.js](https://nodejs.org/) installed on your machine.
-- Git installed (optional, for cloning the repository).
+- [Node.js and npm](https://nodejs.org/en/download/)
+- [Git](https://git-scm.com/downloads)
 
-### 🚀 Installation
+## Installation & Usage
 
-1. Clone the repository (if you haven't already):
+Clone the repository and navigate to the project directory:
 
-   ```shell
-   git clone https://github.com/your-username/access-control-system.git
-   ```
+```bash
+git clone https://github.com/Paul1404/1_RPI-Keypad-Project.git
+cd 1_RPI-Keypad-Project
+```
 
-2. Navigate to the project directory:
-    
-    ```shell
-    cd access-control-system
-    ```
-    
-3. Install project dependencies:
-    
-    ```shell
-    npm install
-    ```
-    
+Install dependencies:
 
-### 🚀 Usage
+```bash
+npm install
+```
 
-1. Start the server:
-    
-    ```shell
-    npm start
-    ```
-    
-2. Access the application in your web browser at [http://localhost:3000](http://localhost:3000).
-    
-3. To add an admin user (for demonstration purposes), you can use the following command:
-    
-    ```shell
-    npm start -- [Username] [Password]
-    ```
-    
-    Replace `[Username]` and `[Password]` with the desired admin user credentials.
-    
+Run the project:
 
-### 🔐 Authentication
+```bash
+npm start
+```
 
-* To access the admin dashboard, use the provided admin user credentials.
-* Upon successful login, a JWT token will be generated and stored in your browser's local storage.
+## Hardware Requirements
 
-### 📁 Structure
+No specific hardware requirements for now, but hardware connectivity is planned for future updates.
 
-* `app.js`: Main server file with authentication and routing logic.
-* `public`: Publicly accessible folder for HTML and client-side JavaScript.
-* `secure`: Secure folder for sensitive files (e.g., admin dashboard).
-* `AccessControl.db`: SQLite database for storing user data.
+## Contributing
 
-### 🙌 Credits
+If you want to contribute to the project, please fork the repository and create a pull request, or simply open an issue for any bug or suggestion you may have.
 
-This project was created by Paul as a demonstration of user authentication and access control in Node.js.
+## License
 
-### 📄 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project uses the following license: [MIT License](LICENSE).
