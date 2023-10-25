@@ -328,7 +328,7 @@ app.post('/remove-admin', (req, res) => {
 
           if (isValidPin) {
             logger.info('Valid PIN. Redirecting...');  // Debugging line
-            return res.redirect('/server-room.html');
+            return res.redirect('/public/server-room.html');
           }
         } catch (error) {
           logger.error('Bcrypt Error:', error);
@@ -393,7 +393,13 @@ async function handleShutdown() {
   }
 }
 
-// Listening for shutdown signals
-process.on('exit', handleShutdown);
-process.on('SIGINT', handleShutdown);
-process.on('SIGTERM', handleShutdown);
+process.stdin.setRawMode(true);
+process.stdin.resume();
+process.stdin.on('data', async (key) => {
+  // Custom exit sequence: Ctrl+X
+  if (key.toString() === '\u0018') {
+    console.log('Caught (CTRL+X) Sequence. Shutting down...');
+    await handleShutdown();
+    process.exit(0);
+  }
+});
