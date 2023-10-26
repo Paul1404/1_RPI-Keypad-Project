@@ -328,7 +328,7 @@ app.post('/remove-admin', (req, res) => {
 
           if (isValidPin) {
             logger.info('Valid PIN. Redirecting...');  // Debugging line
-            return res.redirect('/public/server-room.html');
+            return res.json({ success: true });
           }
         } catch (error) {
           logger.error('Bcrypt Error:', error);
@@ -341,8 +341,6 @@ app.post('/remove-admin', (req, res) => {
       return res.json({ message: 'Invalid PIN' });
     });
   });
-
-
 
 
 app.listen(port, () => {

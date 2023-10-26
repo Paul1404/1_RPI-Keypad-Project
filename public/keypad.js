@@ -36,23 +36,34 @@ document.addEventListener("DOMContentLoaded", function() {
     pin = "";
     document.getElementById("pinDisplay").textContent = pin;
   }
-  
-  async function submitPin() {
-    const response = await fetch('/keypad-input', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ pin: pin })
-    });
-    
-    if (!response.ok) {
-      alert(`Error: ${response.statusText}`);
-      return;
-    }
-  
-    const data = await response.json();
-    alert(data.message);
-    clearPin();
+
+async function submitPin() {
+  console.log("Sending PIN:", JSON.stringify({ pin: pin }));
+  const response = await fetch('/keypad-input', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ pin: pin })
+  });
+
+  if (!response.ok) {
+    alert(`Error: ${response.statusText}`);
+    return;
   }
+
+  const data = await response.json();
+
+  // Check for the success field in the server response
+  if (data.success) {
+    // Redirect to the new HTML page
+    window.location.href = '/server-room.html';
+  } else {
+    // Show a message if login failed
+    alert(data.message);
+  }
+
+  clearPin();
+}
+
   
