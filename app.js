@@ -120,6 +120,7 @@ async function setup() {
 
   // Create a default admin if command line arguments are provided
   const [defaultAdminUsername, defaultAdminPassword] = process.argv.slice(2);
+  // Debug log to check what values are received
   if (defaultAdminUsername && defaultAdminPassword) {
     bcrypt.hash(defaultAdminPassword, saltRounds, (err, hash) => {
       if (err) {
