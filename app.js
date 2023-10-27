@@ -529,6 +529,7 @@ async function handleShutdown() {
             action: 'db_close',
             status: 'failure'
           });
+          logger.debug('Debug: Database failed to close'); // Debug statement
           return reject(err);
         }
 
@@ -537,6 +538,7 @@ async function handleShutdown() {
           action: 'db_close',
           status: 'success'
         });
+        logger.debug('Debug: Database closed successfully'); // Debug statement
 
         resolve();
       });
@@ -548,9 +550,12 @@ async function handleShutdown() {
       action: 'shutdown',
       status: 'failure'
     });
+    logger.debug(`Debug: An error occurred during shutdown: ${err.message}`); // Debug statement
   } finally {
     // Delay the process exit by 2 seconds to allow any remaining logging to complete
+    logger.debug('Debug: Preparing to exit, allowing logs to complete'); // Debug statement
     setTimeout(() => {
+      logger.debug('Debug: Exiting now'); // Debug statement
       process.exit(0);
     }, 2000);
   }
