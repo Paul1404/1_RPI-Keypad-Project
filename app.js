@@ -83,7 +83,7 @@ function initializeLogger() {
   });
 
   // Configure the Winston logger
-  const logger = winston.createLogger({
+  return winston.createLogger({
     level: 'info',
     transports: [
       new winston.transports.File({
@@ -110,13 +110,6 @@ function initializeLogger() {
       })
     ]
   });
-
-  // Log test messages to verify logger initialization
-  logger.info('Test-Information message', { meta: 'some meta data' });
-  logger.error('Test-Error message', { error: 'an error occurred' });
-
-  // Return the configured logger
-  return logger;
 }
 
 
