@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "cross-env NODE_ENV=production node app.js",
-    "dev": "cross-env NODE_ENV=development node app.js"
+    "dev": "cross-env NODE_ENV=development node app.js",
+    "detached": "pm2 start app.js --name rpi-keypad-project"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
@@ -22,7 +23,7 @@
     "bcrypt": "^5.1.1",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "express-rate-limit": "^7.1.2",
+    "express-rate-limit": "^7.1.5",
     "express-session": "^1.17.3",
     "jsonwebtoken": "^9.0.2",
     "path": "^0.12.7",
