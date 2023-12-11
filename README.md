@@ -36,8 +36,16 @@ npm install
 
 Run the project:
 
+* 1 Way running the dev enviroment
+
 ```bash
-npm start
+npm run dev
+```
+
+* 2 Way running a detached server using pm2
+
+```bash
+npm run detached
 ```
 
 ## 🖥 Hardware Requirements
