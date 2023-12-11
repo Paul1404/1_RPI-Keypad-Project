@@ -592,25 +592,27 @@ async function handleShutdown() {
  * Set up custom exit sequences for the application.
  * This listens for specific key presses in the terminal to initiate a graceful shutdown.
  */
-process.stdin.setRawMode(true);  // Enable raw mode for terminal input
-process.stdin.resume();          // Resume stdin in the parent process
+if (process.stdin.isTTY) {
+  process.stdin.setRawMode(true);  // Enable raw mode for terminal input
+  process.stdin.resume();          // Resume stdin in the parent process
 
-/**
- * Event listener for 'data' events on the standard input stream.
- * Captures key presses and checks for a custom exit sequence (Ctrl+X).
- * @async
- * @param {Buffer} key - The keypress captured as a Buffer object.
- */
-process.stdin.on('data', async (key) => {
-  // Check for custom exit sequence: Ctrl+X (represented by the '\u0018' Unicode character)
-  if (key.toString() === '\u0018') {
-    // Log that the custom exit sequence was captured
-    logger.info('Caught (CTRL+X) Sequence. Shutting down...');
+  /**
+   * Event listener for 'data' events on the standard input stream.
+   * Captures key presses and checks for a custom exit sequence (Ctrl+X).
+   * @async
+   * @param {Buffer} key - The keypress captured as a Buffer object.
+   */
+  process.stdin.on('data', async (key) => {
+    // Check for custom exit sequence: Ctrl+X (represented by the '\u0018' Unicode character)
+    if (key.toString() === '\u0018') {
+      // Log that the custom exit sequence was captured
+      logger.info('Caught (CTRL+X) Sequence. Shutting down...');
 
-    // Call the handleShutdown function to perform cleanup operations
-    await handleShutdown();
+      // Call the handleShutdown function to perform cleanup operations
+      await handleShutdown();
 
-    // Exit the process with a 0 (success) status code
-    process.exit(0);
-  }
-});
+      // Exit the process with a 0 (success) status code
+      process.exit(0);
+    }
+  });
+}
