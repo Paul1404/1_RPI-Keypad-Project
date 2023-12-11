@@ -22,12 +22,30 @@ const util = require('util');                    // Utility functions for debugg
 const app = express();                           // Create an instance of the Express application
 const winston = require('winston');              // Winston for logging
 const fs = require('fs');                        // Node.js file system module for file I/O
+const crypto = require('crypto');                // Node.js crypto module for cryptographic functions
 
 
 /**
  * Immediately invoke the `config` function from the `dotenv` package.
  * This loads environment variables from a .env file into `process.env`.
  */
+if (!fs.existsSync(path.join(__dirname, '.env'))) {
+  console.log('No .env file found. A default .env file will be created.');
+
+  // Generate a secure secret key
+  const secretKey = crypto.randomBytes(64).toString('hex');
+
+  // Default values for your environment variables
+  const defaultEnv = `
+PORT=3000
+SECRET_KEY=${secretKey}
+SALT_ROUNDS=10
+`;
+
+  // Write the default .env file
+  fs.writeFileSync(path.join(__dirname, '.env'), defaultEnv);
+}
+
 require('dotenv').config();
 
 // Check that all necessary environment variables are set
