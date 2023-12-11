@@ -446,47 +446,46 @@ setup().then(db => {
   });
 
 
-  /**
+/**
    * Handle keypad input for PIN entry.
    * This endpoint receives a PIN as input and checks it against valid PINs stored in the database.
    * @async
    * @param {Object} req - The Express request object.
    * @param {Object} res - The Express response object.
    * @returns {Promise<JSON>} A promise that resolves with a JSON response indicating the success or failure of PIN validation.
-   */
-  app.post('/keypad-input', async (req, res) => {
-    const { pin } = req.body;
+ */
+app.post('/keypad-input', async (req, res) => {
+  const { pin } = req.body;
 
-    // SQL query to fetch all stored hashed PINs from the database
-    const query = 'SELECT pin FROM valid_pins';
-    db.all(query, [], async (err, rows) => {
-      if (err) {
-        logger.error('Database Error:', err);
+  // SQL query to fetch all stored hashed PINs from the database
+  const query = 'SELECT pin FROM valid_pins';
+  db.all(query, [], async (err, rows) => {
+    if (err) {
+      logger.error('Database Error:', err);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+
+    // Loop through each fetched row to check if the entered PIN matches any stored hashed PIN
+    for (const row of rows) {
+      try {
+        const isValidPin = await bcrypt.compare(pin, row.pin);
+
+        if (isValidPin) {
+          // Log a successful PIN match for debugging purposes
+          logger.info('Valid PIN. Redirecting...');
+          return res.json({ success: true });
+        }
+      } catch (error) {
+        logger.error('Bcrypt Error:', error);
         return res.status(500).json({ message: 'Internal Server Error' });
       }
+    }
 
-      // Loop through each fetched row to check if the entered PIN matches any stored hashed PIN
-      for (const row of rows) {
-        try {
-          const isValidPin = await bcrypt.compare(pin, row.pin);
-
-          if (isValidPin) {
-            // Log a successful PIN match for debugging purposes
-            logger.info('Valid PIN. Redirecting...');
-            return res.json({ success: true });
-          }
-        } catch (error) {
-          logger.error('Bcrypt Error:', error);
-          return res.status(500).json({ message: 'Internal Server Error' });
-        }
-      }
-
-      // If loop finishes and no return statement has been executed, then the entered PIN is invalid
-      logger.info('Invalid PIN. Not Redirecting...');
-      return res.json({ message: 'Invalid PIN' });
-    });
+    // If loop finishes and no return statement has been executed, then the entered PIN is invalid
+    logger.info('Invalid PIN. Not Redirecting...');
+    return res.json({ success: false, message: 'Invalid PIN entered' });
   });
-
+});
 
   /**
    * Start the Express web server.
