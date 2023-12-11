@@ -166,6 +166,8 @@ async function initializeDatabase() {
 async function setup() {
   const db = await initializeDatabase();
   logger.info("Successfully initialized the database");
+  logger.info("You can create a default admin by passing the username and password as command line arguments")
+  logger.info("Example: npm run dev 'admin' 'admin123'")
 
   // SQL queries to initialize tables
   const tableInitQueries = [
