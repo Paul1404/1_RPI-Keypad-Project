@@ -30,6 +30,13 @@ const fs = require('fs');                        // Node.js file system module f
  */
 require('dotenv').config();
 
+// Check that all necessary environment variables are set
+['PORT', 'SECRET_KEY', 'SALT_ROUNDS'].forEach((variable) => {
+  if (!process.env[variable]) {
+    throw new Error(`Environment variable ${variable} is not set. Please ensure all necessary environment variables are set.`);
+  }
+});
+
 
 /**
  * Initialize database connection variable.
