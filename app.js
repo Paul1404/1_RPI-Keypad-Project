@@ -17,6 +17,7 @@ const sqlite3 = require('sqlite3').verbose();    // SQLite3 for database managem
 const bcrypt = require('bcrypt');                // bcrypt for password hashing
 const session = require('express-session');      // express-session for session management
 const rateLimit = require("express-rate-limit"); // Rate limiting to prevent abuse
+const { body, validationResult } = require('express-validator'); // express-validator for input validation
 const path = require('path');                    // Node.js path module for handling file and directory paths
 const util = require('util');                    // Utility functions for debugging and logging
 const app = express();                           // Create an instance of the Express application
@@ -156,6 +157,11 @@ app.use(session({
   cookie: { secure: false } // Use secure: true in production!!!
 }));
 
+// Set up rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
 
 /**
  * Asynchronously initialize the SQLite database.
@@ -472,7 +478,15 @@ setup().then(db => {
    * @param {Object} res - The Express response object.
    * @returns {Promise<JSON>} A promise that resolves with a JSON response indicating the success or failure of PIN validation.
  */
-app.post('/keypad-input', async (req, res) => {
+app.post('/keypad-input', limiter, [
+  // Validate PIN input
+  body('pin').isLength({ min: 4, max: 4 }).withMessage('PIN must be 4 digits long'),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { pin } = req.body;
 
   // SQL query to fetch all stored hashed PINs from the database
@@ -480,7 +494,7 @@ app.post('/keypad-input', async (req, res) => {
   db.all(query, [], async (err, rows) => {
     if (err) {
       logger.error('Database Error:', err);
-      return res.status(500).json({ message: 'Internal Server Error' });
+      return res.status(500).json({ message: 'Authentication failed' });
     }
 
     // Loop through each fetched row to check if the entered PIN matches any stored hashed PIN
@@ -495,13 +509,13 @@ app.post('/keypad-input', async (req, res) => {
         }
       } catch (error) {
         logger.error('Bcrypt Error:', error);
-        return res.status(500).json({ message: 'Internal Server Error' });
+        return res.status(500).json({ message: 'Authentication failed' });
       }
     }
 
     // If loop finishes and no return statement has been executed, then the entered PIN is invalid
     logger.info('Invalid PIN. Not Redirecting...');
-    return res.json({ success: false, message: 'Invalid PIN entered' });
+    return res.json({ success: false, message: 'Authentication failed' });
   });
 });
 
