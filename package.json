@@ -1,6 +1,6 @@
 {
   "name": "@paul1404/rpi-keypad-project",
-  "version": "1.0.0",
+  "version": "0.6.2",
   "description": "This project simulates a keypad and provides a backend dashboard for administration. It serves as a simulation model for an upcoming school project.",
   "main": "app.js",
   "scripts": {
