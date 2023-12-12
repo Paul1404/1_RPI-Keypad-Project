@@ -570,23 +570,25 @@ async function handleShutdown() {
       });
     });
   } catch (err) {
-    // Log any errors that occur during the shutdown process
     logger.error('An error occurred during shutdown', {
       error_message: err.message,
       action: 'shutdown',
       status: 'failure'
     });
-    logger.debug(`Debug: An error occurred during shutdown: ${err.message}`); // Debug statement
+    logger.debug(`Debug: An error occurred during shutdown: ${err.message}`);
+    reject(err);  // Reject the promise with the error
   } finally {
-    // Delay the process exit by 2 seconds to allow any remaining logging to complete
-    logger.debug('Debug: Preparing to exit, allowing logs to complete'); // Debug statement
+    logger.debug('Debug: Preparing to exit, allowing logs to complete');
     setTimeout(() => {
-      logger.debug('Debug: Exiting now'); // Debug statement
+      logger.debug('Debug: Exiting now');
       process.exit(0);
     }, 2000);
-  }
+  }  
 }
 
+// Listen for process termination signals
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);
 
 /**
  * Set up custom exit sequences for the application.
