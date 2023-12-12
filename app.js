@@ -24,6 +24,7 @@ const app = express();                           // Create an instance of the Ex
 const winston = require('winston');              // Winston for logging
 const fs = require('fs');                        // Node.js file system module for file I/O
 const crypto = require('crypto');                // Node.js crypto module for cryptographic functions
+const serverRoomRouter = require('./public/server-room'); // Router for the server-room.html page
 
 
 /**
@@ -302,20 +303,7 @@ setup().then(db => {
     });
   });
 
-
-  /**
-   * Serve the admin dashboard if the user is authenticated.
-   * @param {Request} req - Express request object
-   * @param {Response} res - Express response object
-   */
-  app.get('/admin_dashboard', (req, res) => {
-    if (req.session.username) {
-      res.sendFile(path.join(__dirname, 'public/admin_dashboard.html'));
-    } else {
-      res.status(401).sendFile(path.join(__dirname, 'public/unauthorized.html'));
-    }
-  });
-
+  app.use('/server-room.html', serverRoomRouter);
 
   /**
    * Handle POST requests to add a new PIN.
@@ -505,6 +493,7 @@ app.post('/keypad-input', limiter, [
         if (isValidPin) {
           // Log a successful PIN match for debugging purposes
           logger.info('Valid PIN. Redirecting...');
+          req.session.isAuthenticated = true; // Set the session flag
           return res.json({ success: true });
         }
       } catch (error) {
