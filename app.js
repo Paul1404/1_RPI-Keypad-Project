@@ -250,7 +250,6 @@ setup().then(db => {
   // Serve static files from the 'public' directory
   app.use(express.static('public'));
 
-
   /**
    * Initialize rate limiting middleware.
    * Limits requests to 5 every 15 minutes.
