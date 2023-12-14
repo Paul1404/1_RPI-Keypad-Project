@@ -24,7 +24,9 @@ const app = express();                           // Create an instance of the Ex
 const winston = require('winston');              // Winston for logging
 const fs = require('fs');                        // Node.js file system module for file I/O
 const crypto = require('crypto');                // Node.js crypto module for cryptographic functions
-
+const RaspberryPi = require('./gpio');           // RaspberryPi class for GPIO functionality
+const pi = new RaspberryPi(4, 17); // RFID-Sensor ist an GPIO-Pin 4 angeschlossen, Servomotor an Pin 17
+const allowedKeys = ['1234567890', '0987654321']; // Ersetzen Sie dies durch die tatsächlichen RFID-Schlüssel
 
 /**
  * Immediately invoke the `config` function from the `dotenv` package.
@@ -257,6 +259,18 @@ setup().then(db => {
   const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5
+  });
+
+  pi.listenForRFID(allowedKeys, () => {
+    console.log('Access granted');
+    pi.openDoor();
+  }, () => {
+    console.log('Access denied');
+  });
+  
+  process.on('SIGINT', () => {
+    pi.cleanup();
+    process.exit();
   });
 
 
